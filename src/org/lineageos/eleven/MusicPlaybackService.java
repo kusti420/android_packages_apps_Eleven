@@ -1728,7 +1728,13 @@ public class MusicPlaybackService extends MediaBrowserService
         BitmapWithColors artwork = getAlbumArt(false);
 
         if (mNotificationPostTime == 0) {
-            mNotificationPostTime = SystemClock.elapsedRealtime();
+            // Must be wall-clock, not uptime. setWhen() is interpreted as epoch milliseconds, so
+            // elapsedRealtime() lands in 1970 — and NotificationManagerService drops anything whose
+            // "when" is older than NOTIFICATION_MAX_AGE_AT_POST (14 days) before it is ever posted
+            // ("Ignored enqueue for old ... notification"). That silently killed the playback
+            // notification, and with it the Quick Settings media controls, since the media carousel
+            // is fed by the posted notification rather than by the media session alone.
+            mNotificationPostTime = System.currentTimeMillis();
         }
 
         NotificationChannel channel = mNotificationManager.getNotificationChannel(CHANNEL_NAME);
